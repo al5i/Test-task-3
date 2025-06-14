@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api\v1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TenderRequest;
 use App\Models\Tender;
+use App\Services\api\v1\TenderService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -12,6 +13,11 @@ use League\Csv\Reader;
 
 class TenderController extends Controller
 {
+    public function __construct(
+        private readonly TenderService $tenderService
+    )
+    {
+    }
     // TODO: Реализовать в Swagger
     /**
      * Import from Postman info .csv
@@ -86,15 +92,9 @@ class TenderController extends Controller
     public function create(TenderRequest $request)
     {
         //Для создания тендера
-        $request->validated();
+        $validated = $request->validated();
 
-        $tender = Tender::firstOrCreate([
-            'external_code' => $request["external_code"],
-            'number' => $request["number"],
-            'status' => $request["status"],
-            'title' => $request["title"],
-            'date' => $request["date"],
-        ]);
+        $tender = $this->tenderService->create($validated);
 
         return response()->json([
             'message' => $tender,
@@ -108,20 +108,7 @@ class TenderController extends Controller
     public function store(TenderRequest $request)
     {
         // Запрос для получения списка тендеров с фильтрацией
-        $query = Tender::query();
-
-        if ($request->has('title')) {
-            $query->where('title', 'like', '%' . $request->input('title') . '%');
-        }
-
-        if ($request->has('date')) {
-            $inputDate = $request->input('date');
-
-            $query->where('date', $inputDate);
-        }
-
-        $tenders = $query->get();
-
+        $tenders = $this->tenderService->store($request);
         return response()->json($tenders);
     }
 
